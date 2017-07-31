@@ -1,9 +1,7 @@
 <?php
 namespace OAuthServer\Test\TestCase\Auth;
 
-use Cake\Controller\ComponentRegistry;
 use Cake\Network\Request;
-use Cake\Network\Response;
 use Cake\ORM\TableRegistry;
 use Cake\TestSuite\TestCase;
 use OAuthServer\Auth\OAuthAuthenticate;
@@ -19,12 +17,12 @@ class OAuthAuthenticateTest extends TestCase
     public function setUp()
     {
         parent::setUp();
-        $this->Collection = $this->getMockBuilder(ComponentRegistry::class)->getMock();
+        $this->Collection = $this->getMock('Cake\Controller\ComponentRegistry');
         $this->auth = new OAuthAuthenticate($this->Collection, [
             'userModel' => 'Users'
         ]);
         TableRegistry::clear();
-        $this->response = $this->getMockBuilder(Response::class)->getMock();
+        $this->response = $this->getMock('Cake\Network\Response');
     }
 
     public function testAuthenticate()

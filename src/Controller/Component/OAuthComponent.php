@@ -4,7 +4,7 @@ namespace OAuthServer\Controller\Component;
 use Cake\Controller\Component;
 use Cake\Core\App;
 use Cake\Network\Exception\NotImplementedException;
-use Cake\Utility\Inflector;
+use OAuthServer\Model\Storage;
 use OAuthServer\Traits\GetStorageTrait;
 
 class OAuthComponent extends Component
@@ -21,13 +21,14 @@ class OAuthComponent extends Component
      *
      * @var array
      */
-    protected $_allowedGrants = ['AuthCode', 'RefreshToken', 'ClientCredentials', 'Password'];
+    protected $_allowedGrants = ['AuthCode', 'RefreshToken', 'ClientCredentials'];
 
     /**
      * @var array
      */
     protected $_defaultConfig = [
-        'supportedGrants' => ['AuthCode', 'RefreshToken', 'ClientCredentials', 'Password'],
+        'tokenTTL' => 2592000, //TTL 30 * 24 * 60 * 60 in seconds
+        'supportedGrants' => ['AuthCode', 'RefreshToken', 'ClientCredentials'],
         'storages' => [
             'session' => [
                 'className' => 'OAuthServer.Session'
@@ -60,7 +61,6 @@ class OAuthComponent extends Component
     {
         $serverConfig = $this->config('authorizationServer');
         $serverClassName = App::className($serverConfig['className']);
-
         return new $serverClassName();
     }
 
@@ -79,48 +79,39 @@ class OAuthComponent extends Component
         $server->setRefreshTokenStorage($this->_getStorage('refreshToken'));
 
         $supportedGrants = isset($config['supportedGrants']) ? $config['supportedGrants'] : $this->config('supportedGrants');
-        $supportedGrants = $this->_registry->normalizeArray($supportedGrants);
-
-        foreach ($supportedGrants as $properties) {
-            $grant = $properties['class'];
-
+        foreach ($supportedGrants as $grant) {
             if (!in_array($grant, $this->_allowedGrants)) {
-                throw new NotImplementedException(__('The {0} grant type is not supported by the OAuthServer'));
+                throw new NotImplementedException(__('The {0} grant type is not supported by the OAuth server'));
             }
 
             $className = '\\League\\OAuth2\\Server\\Grant\\' . $grant . 'Grant';
-            $objGrant = new $className();
-
-            if ($grant === 'Password') {
-                $objGrant->setVerifyCredentialsCallback(function ($username, $password) {
-                    $controller = $this->_registry->getController();
-                    $controller->Auth->constructAuthenticate();
-                    $userfield = $controller->Auth->_config['authenticate']['Form']['fields']['username'];
-                    $controller->request->data[$userfield] = $username;
-                    $controller->request->data['password'] = $password;
-                    $loginOk = $controller->Auth->identify();
-                    if ($loginOk) {
-                        return $loginOk['id'];
-                    } else {
-                        return false;
-                    }
-                });
-            }
-
-            foreach ($properties['config'] as $key => $value) {
-                $method = 'set' . Inflector::camelize($key);
-                if (is_callable([$objGrant, $method])) {
-                    $objGrant->$method($value);
-                }
-            }
-
-            $server->addGrantType($objGrant);
+            $server->addGrantType(new $className());
         }
 
-        if ($this->config('accessTokenTTL')) {
-            $server->setAccessTokenTTL($this->config('accessTokenTTL'));
-        }
+        $server->setAccessTokenTTL($this->config('tokenTTL'));
 
         $this->Server = $server;
+    }
+
+    /**
+     * @param string $authGrant Grant type
+     * @return bool|\Cake\Network\Response|void
+     */
+    public function checkAuthParams($authGrant)
+    {
+        $controller = $this->_registry->getController();
+        try {
+            return $this->Server->getGrantType($authGrant)->checkAuthorizeParams();
+        } catch (\OAuthException $e) {
+            if ($e->shouldRedirect()) {
+                return $controller->redirect($e->getRedirectUri());
+            }
+
+            $controller->RequestHandler->renderAs($this, 'json');
+            $controller->response->statusCode($e->httpStatusCode);
+            $controller->response->header($e->getHttpHeaders());
+            $controller->set('response', $e);
+            return false;
+        }
     }
 }

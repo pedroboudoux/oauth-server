@@ -29,7 +29,6 @@ class Client extends Entity
             return null;
         }
         $parentTable = TableRegistry::get($this->parent_model);
-
         return $parentTable->get($this->parent_id);
     }
 

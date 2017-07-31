@@ -7,14 +7,7 @@
         </li>
     <?php endforeach; ?>
 </ul>
-<?php
-echo $this->Form->create(null);
-echo $this->Form->input('Approve', [
-    'name' => 'authorization',
-    'type' => 'submit'
-]);
-echo $this->Form->input('Deny', [
-    'name' => 'authorization',
-    'type' => 'submit'
-]);
-echo $this->Form->end();
+<?= $this->Form->create(null); ?>
+    <input type="submit" value="Approve" name="authorization">
+    <input type="submit" value="Deny" name="authorization">
+<?= $this->Form->end(); ?>

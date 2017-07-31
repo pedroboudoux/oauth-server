@@ -19,20 +19,14 @@ chdir($root);
 require_once 'vendor/cakephp/cakephp/src/basics.php';
 require_once 'vendor/autoload.php';
 define('ROOT', $root . DS . 'tests' . DS . 'test_app' . DS);
-define('APP', ROOT);
-define('CONFIG', $root . DS . 'config' . DS);
+define('APP', ROOT . 'App' . DS);
 define('TMP', sys_get_temp_dir() . DS);
-
-$loader = new \Cake\Core\ClassLoader;
-$loader->register();
-$loader->addNamespace('TestApp', APP);
-
 Configure::write('debug', true);
 Configure::write('App', [
     'namespace' => 'App',
     'paths' => [
         'plugins' => [ROOT . 'Plugin' . DS],
-        'templates' => [ROOT . 'Template' . DS]
+        'templates' => [ROOT . 'App' . DS . 'Template' . DS]
     ]
 ]);
 Cake\Cache\Cache::config([
@@ -55,17 +49,7 @@ if (!getenv('db_dsn')) {
 if (!getenv('DB')) {
     putenv('DB=sqlite');
 }
-
 ConnectionManager::config('test', ['url' => getenv('db_dsn')]);
-
-Configure::write('OAuthServer.appController', 'TestApp\Controller\TestAppController');
-
-require_once $root . DS . 'config' . DS . 'bootstrap.php';
-
 Plugin::load('OAuth', [
     'path' => dirname(dirname(__FILE__)) . DS,
 ]);
-Plugin::load('OAuthServer', ['path' => $root]);
-
-\Cake\Routing\DispatcherFactory::add('Routing');
-\Cake\Routing\DispatcherFactory::add('ControllerFactory');

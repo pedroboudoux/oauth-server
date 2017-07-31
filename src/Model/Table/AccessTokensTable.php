@@ -9,6 +9,7 @@ use Cake\ORM\Table;
  *
  * @property Client $Client
  * @property User $User
+ * @property SessionsTable $Sessions
  */
 class AccessTokensTable extends Table
 {
@@ -18,8 +19,8 @@ class AccessTokensTable extends Table
      */
     public function initialize(array $config)
     {
-        $this->table('oauth_access_tokens');
-        $this->primaryKey('oauth_token');
+        $this->setTable('oauth_access_tokens');
+        $this->setPrimaryKey('oauth_token');
         $this->belongsTo('Sessions', [
             'className' => 'OAuthServer.Sessions',
         ]);
